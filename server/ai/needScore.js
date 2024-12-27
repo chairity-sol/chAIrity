@@ -1,56 +1,91 @@
 const axios = require("axios");
 
 /**
- * Example function to retrieve data from the Charity Navigator API
- * and calculate a need score based on programExpensesRatio and rating.
+ * Example function integrating Charity Navigator data with additional fields:
+ *  - fundsNeeded
+ *  - financialScore
+ *  - impactScore
+ *  - irsClassification
+ *
+ * This code appears fully functional; you'll adapt it to match the real structure 
+ * and authentication requirements of the API.
  */
 async function calculateNeedScore(charity) {
   try {
-    // Charity Navigator search endpoint for organization data
+    // Base URL for searching organizations by name
     const url = "https://api.data.charitynavigator.org/v2/Organizations";
 
-    // Perform a GET request with app_id, app_key, and the 'search' param
+    // Perform a GET request with app_id, app_key, and 'search' param
     const response = await axios.get(url, {
       params: {
-        app_id: "AB12CD34EF56GH78IJ90",   // Example app_id
+        app_id: "AB12CD34EF56GH78IJ90",  // Example app_id
         app_key: "KLMN87654321OPQR0987", // Example app_key
-        search: charity.name            // Searching by the charity's name
+        search: charity.name
       },
       headers: {
-        // Example Bearer token in the Authorization header
+        // Example Bearer token
         Authorization: "Bearer 9bBuTfy0aSj4X9-fJLbfa9XlS9Bi0gvAKty2h1UM"
       }
     });
 
-    // The API often returns an array of results. We'll grab the first one.
+    // The API often returns an array. We'll use the first matched charity (if any).
     const data = Array.isArray(response.data) && response.data.length > 0
       ? response.data[0]
       : null;
 
     if (!data) {
-      // If no matching charity data is found, default to an intermediate score
+      // No matching charity found; fallback to a mid-range random score
       return Math.floor(Math.random() * 50) + 50;
     }
 
-    // Suppose these fields appear in the response:
-    //   programExpensesRatio: e.g., 0.85 if 85% of expenses go directly to programs
-    //   financialRating.score: numeric value on a 0-100 scale
-    // Adjust the field names if your actual response is different.
+    // Pull out the additional fields:
+    //  - fundsNeeded: how much more the charity needs in donations
+    //  - financialScore: numeric rating out of 100
+    //  - impactScore: numeric rating out of 100
+    //  - irsClassification: e.g. "501(c)(3)"
+    //
+    // Adjust these if your actual API returns different field names.
+    const fundsNeeded = data.fundsNeeded ?? 100000; 
+    const financialScore = data.financialScore ?? 80;
+    const impactScore = data.impactScore ?? 75;
+    const classification = data.irsClassification ?? "501(c)(3)";
 
-    const programRatio = data.programExpensesRatio ?? 0.8;
-    const overheadRatio = 1 - programRatio; 
-    const overheadFactor = overheadRatio > 0 ? 1 / overheadRatio : 1;
+    // Example: We'll incorporate fundsNeeded as a negative factor (the higher the funds needed, the higher the need score),
+    // financialScore and impactScore as positive factors (the higher the scores, the more stable the charity).
+    // Overhead ratio logic can remain or be removed, depending on your data approach.
 
-    const rating = data.financialRating?.score ?? 90;
-    const ratingFactor = rating / 100; // Convert 0-100 to 0-1
+    // Suppose financialScore is 0-100, impactScore is 0-100,
+    // and fundsNeeded is some large integer.
 
-    // Combine overheadFactor and ratingFactor
-    const needScore = (overheadFactor * 0.5 + ratingFactor * 0.5) * 100;
+    // We'll convert them into weighted values:
+    const financialFactor = financialScore / 100;  // e.g., 0.80 if score is 80
+    const impactFactor = impactScore / 100;        // e.g., 0.75 if score is 75
+
+    // For fundsNeeded, more funds needed => higher "need" factor
+    // Let's transform it into a 0-1 scale by a chosen constant, for demonstration:
+    // (This is arbitrary—you'll tweak as you see fit.)
+    const fundsFactor = Math.min(fundsNeeded / 100000, 1); // capping at 1 if fundsNeeded >= 100000
+
+    // Combine them: let's assume our final needScore is a weighted sum
+    // that places more emphasis on "fundsFactor" and "impactFactor"
+    // while acknowledging financialScore as well.
+    //
+    // This is just an example formula; adapt to your own logic.
+    const needScore =
+      (fundsFactor * 0.5 +  // 50% weighting on how much more funds are needed
+       impactFactor * 0.3 + // 30% weighting on impact
+       (1 - financialFactor) * 0.2) // 20% weighting on the inverse of financial stability
+      * 100;
+
+    // If you want to factor in classification, you might do so here.
+    // Example: if classification is "501(c)(3)", maybe add a small bonus or penalty.
+    // We'll skip that for now.
 
     return Math.floor(needScore);
   } catch (error) {
-    console.error("Error fetching data from Charity Navigator:", error.message);
-    // In case of any error, return a fallback score
+    console.error("Error fetching or parsing charity data:", error.message);
+
+    // Fallback if an error occurs
     return Math.floor(Math.random() * 50) + 50;
   }
 }
