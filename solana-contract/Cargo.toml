@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "programs/donation_contract",
+]
+
+[dependencies]
+anchor-cli = "0.26.0"
