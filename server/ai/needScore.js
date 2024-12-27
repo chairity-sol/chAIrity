@@ -13,7 +13,7 @@ const axios = require("axios");
 async function calculateNeedScore(charity) {
   try {
     // Base URL for searching organizations by name
-    const url = "https://api.data.charitynavigator.org/v2/Organizations";
+    const url = "https://api.charitynavigator.org/v2/Organizations";
 
     // Perform a GET request with app_id, app_key, and 'search' param
     const response = await axios.get(url, {
