@@ -1,0 +1,9 @@
+[workspace]
+members = ["programs/*"]
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "anchor test"
